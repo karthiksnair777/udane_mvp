@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useUser } from '@insforge/react';
-import { insforge, Product } from '../lib/insforge';
+import { useUser } from '../contexts/AuthContext';
+import { supabase, Product } from '../lib/supabase';
 import { indianFormat } from '../lib/utils';
-import { Search, Plus, Minus, Trash2, Receipt, BadgeIndianRupee, ShoppingCart, PackageOpen, Image as ImageIcon, CreditCard, Banknote, QrCode, Wallet, Percent } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, Receipt, BadgeIndianRupee, ShoppingCart, PackageOpen, Image as ImageIcon, CreditCard, Banknote, QrCode, Wallet, Percent, X, CheckCircle2 } from 'lucide-react';
 
 type CartItem = Product & { cartQuantity: number };
 
@@ -18,12 +18,17 @@ export function POS() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
+    const [receiptData, setReceiptData] = useState<any>(null);
+    
+    // Payment Modal State
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [amountTendered, setAmountTendered] = useState<number | ''>('');
 
     useEffect(() => {
         if (!shopId) return;
 
         // Load available products
-        insforge.database
+        supabase
             .from('products')
             .select('*')
             .eq('shop_id', shopId)
@@ -83,21 +88,19 @@ export function POS() {
             const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
 
             // 1. Create Sale
-            const saleResponse = await insforge.database
+            const { data: saleData, error: saleError } = await supabase
                 .from('sales')
                 .insert({
                     shop_id: shopId,
                     invoice_number: invoiceNumber,
                     total_amount: grandTotal,
-                    payment_method: paymentMethod,
-                    discount_amount: discountAmount,
-                    tax_amount: taxTotal,
-                    status: 'paid'
+                    payment_method: paymentMethod.toLowerCase() === 'wallet' ? 'upi' : paymentMethod.toLowerCase()
                 })
                 .select()
                 .single();
 
-            const newSaleId = saleResponse.data?.id;
+            if (saleError) throw new Error(saleError.message);
+            const newSaleId = saleData?.id;
 
             if (!newSaleId) throw new Error('Failed to create sale');
 
@@ -107,28 +110,41 @@ export function POS() {
                 product_id: item.id,
                 quantity: item.cartQuantity,
                 unit_price: item.selling_price,
-                tax: (item.selling_price * (item.tax_percentage || 0) / 100) * item.cartQuantity,
                 total_price: (item.selling_price * item.cartQuantity) + (item.selling_price * (item.tax_percentage || 0) / 100) * item.cartQuantity
             }));
 
-            await insforge.database.from('sale_items').insert(saleItems);
+            await supabase.from('sale_items').insert(saleItems);
 
             // 3. Decrease Stock levels manually
             for (const item of cart) {
-                await insforge.database
+                await supabase
                     .from('products')
                     .update({ stock_quantity: item.stock_quantity - item.cartQuantity })
                     .eq('id', item.id);
             }
 
+            const currentReceipt = {
+                invoiceNumber,
+                items: [...cart],
+                subTotal,
+                taxTotal,
+                discountAmount,
+                grandTotal,
+                paymentMethod,
+                amountTendered,
+                date: new Date().toLocaleString()
+            };
+            setReceiptData(currentReceipt);
+
             setMessage(`Receipt ${invoiceNumber} created successfully!`);
             setCart([]);
             setDiscountAmount(0);
+            setAmountTendered('');
+            setIsPaymentModalOpen(false); // Close modal
             setShowPaymentSuccess(true);
-            setTimeout(() => setShowPaymentSuccess(false), 3000);
 
             // reload inventory
-            const { data } = await insforge.database.from('products').select('*').eq('shop_id', shopId).gt('stock_quantity', 0);
+            const { data } = await supabase.from('products').select('*').eq('shop_id', shopId).gt('stock_quantity', 0);
             if (data) setProducts(data);
 
         } catch (e: any) {
@@ -155,7 +171,7 @@ export function POS() {
     return (
         <div className="flex flex-col lg:flex-row h-full overflow-hidden bg-gray-50">
             {/* Search & Products - Left Side */}
-            <div className="flex-[2] bg-gray-50 p-6 flex flex-col gap-6 overflow-hidden">
+            <div className="flex-[2] bg-gray-50 p-6 flex flex-col gap-6 overflow-hidden print:hidden">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-emerald-600 to-green-500 tracking-tight">Point of Sale</h2>
@@ -219,7 +235,7 @@ export function POS() {
             </div>
 
             {/* Cart & Payment - Right Side */}
-            <div className="w-full lg:w-[450px] bg-white border-l border-gray-100 flex flex-col shadow-2xl z-10 relative">
+            <div className="w-full lg:w-[450px] bg-white border-l border-gray-100 flex flex-col shadow-2xl z-10 relative print:hidden">
                 <div className="p-6 border-b border-gray-100 bg-white flex items-center justify-between z-10 sticky top-0">
                     <div className="flex flex-col">
                         <h3 className="font-extrabold text-gray-900 text-xl flex items-center gap-2">
@@ -335,27 +351,204 @@ export function POS() {
                         )}
 
                         <button
-                            onClick={handleCheckout}
+                            onClick={() => setIsPaymentModalOpen(true)}
                             disabled={cart.length === 0 || loading}
                             className={`w-full py-4 rounded-2xl text-white font-black text-lg flex items-center justify-center gap-3 transition-all relative overflow-hidden ${cart.length === 0 || loading ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 shadow-[0_8px_30px_rgba(16,185,129,0.3)] active:scale-[0.98]'
                                 }`}
                         >
                             {!loading && !showPaymentSuccess && <BadgeIndianRupee className="w-6 h-6" />}
-                            {loading ? (
-                                <div className="flex items-center gap-2">
-                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    Processing...
-                                </div>
-                            ) : showPaymentSuccess ? (
+                            {showPaymentSuccess ? (
                                 'Payment Successful! 🎉'
                             ) : (
-                                'Complete & Print Receipt'
+                                'Proceed to Payment'
                             )}
                         </button>
                     </div>
                 </div>
             </div>
+
+            {/* Payment Processing Modal */}
+            {isPaymentModalOpen && (
+                <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100 scale-in-center">
+                        <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+                            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                {paymentMethod === 'Cash' && <Banknote className="w-6 h-6 text-emerald-500" />}
+                                {paymentMethod === 'UPI' && <QrCode className="w-6 h-6 text-purple-500" />}
+                                {paymentMethod === 'Card' && <CreditCard className="w-6 h-6 text-blue-500" />}
+                                Payment: {paymentMethod}
+                            </h3>
+                            <button onClick={() => setIsPaymentModalOpen(false)} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                                <X className="w-5 h-5 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <div className="p-8 space-y-6">
+                            <div className="text-center">
+                                <p className="text-gray-500 font-medium mb-1">Amount to Pay</p>
+                                <h2 className="text-5xl font-black text-gray-900 tracking-tight">₹{indianFormat(grandTotal)}</h2>
+                            </div>
+
+                            {paymentMethod === 'Cash' && (
+                                <div className="space-y-4 animate-in slide-in-from-bottom-2">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-gray-700">Cash Received from Customer</label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-4 font-bold text-gray-400">₹</span>
+                                            <input 
+                                                type="number" 
+                                                autoFocus
+                                                value={amountTendered} 
+                                                onChange={e => setAmountTendered(Number(e.target.value) || '')}
+                                                className="w-full pl-10 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl text-xl font-bold focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-2">
+                                        {[100, 500, 1000, 2000].map(amt => (
+                                            <button 
+                                                key={amt} 
+                                                onClick={() => setAmountTendered(amt)}
+                                                className="flex-1 py-3 bg-white border border-gray-200 rounded-xl font-bold text-gray-600 hover:border-emerald-500 hover:text-emerald-600 transition-colors shadow-sm"
+                                            >
+                                                +₹{amt}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <div className={`p-4 rounded-2xl border transition-colors ${typeof amountTendered === 'number' && amountTendered >= grandTotal ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-gray-50 border-gray-100 text-gray-500'}`}>
+                                        <p className="text-sm font-bold mb-1 uppercase tracking-wide">Change Due</p>
+                                        <p className="text-3xl font-black">
+                                            ₹{typeof amountTendered === 'number' && amountTendered >= grandTotal ? indianFormat(amountTendered - grandTotal) : '0.00'}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {paymentMethod === 'UPI' && (
+                                <div className="flex flex-col items-center justify-center space-y-4 animate-in slide-in-from-bottom-2">
+                                    <div className="w-56 h-56 bg-white border-4 border-gray-100 p-3 rounded-3xl shadow-sm flex items-center justify-center relative overflow-hidden group">
+                                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi://pay?pa=shopkeeper@upi&pn=UdanePOS&am=${grandTotal}`} alt="UPI QR Code" className="w-full h-full object-contain opacity-90 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                    <p className="text-gray-500 font-medium text-center bg-gray-50 px-4 py-2 rounded-full border border-gray-100">Ask customer to scan with PhonePe, GPay, or Paytm</p>
+                                </div>
+                            )}
+
+                            {paymentMethod === 'Card' && (
+                                <div className="py-8 flex flex-col items-center justify-center text-center space-y-4 animate-in slide-in-from-bottom-2">
+                                    <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center animate-pulse shadow-inner border-[6px] border-white">
+                                        <CreditCard className="w-10 h-10 text-blue-500" />
+                                    </div>
+                                    <div>
+                                        <p className="font-extrabold text-gray-900 text-xl">Awaiting Terminal</p>
+                                        <p className="text-gray-500 mt-2 font-medium">Please swipe, dip, or tap the card on the POS machine to process ₹{indianFormat(grandTotal)}.</p>
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+
+                        <div className="p-6 bg-gray-50/80 border-t border-gray-100">
+                            <button
+                                onClick={handleCheckout}
+                                disabled={loading || (paymentMethod === 'Cash' && (typeof amountTendered !== 'number' || amountTendered < grandTotal))}
+                                className={`w-full py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all ${
+                                    loading || (paymentMethod === 'Cash' && (typeof amountTendered !== 'number' || amountTendered < grandTotal))
+                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-gray-900 text-white hover:bg-black shadow-[0_8px_30px_rgba(0,0,0,0.15)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.25)] active:scale-[0.98]'
+                                }`}
+                            >
+                                {loading ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Processing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="w-6 h-6" /> Confirm & Print Receipt
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Print Receipt Modal */}
+            {showPaymentSuccess && receiptData && (
+                <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-md flex items-center justify-center p-4 z-[60] animate-in zoom-in-95 duration-200">
+                    <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
+                        
+                        {/* Printable Area */}
+                        <div className="flex-1 overflow-y-auto p-8 bg-white text-black print:p-0 print:overflow-visible dark:text-gray-900">
+                            <div className="text-center mb-6">
+                                <h1 className="text-2xl font-black uppercase tracking-widest">{user?.profile?.name || 'Udane POS'}</h1>
+                                <p className="text-sm text-gray-500 font-mono mt-1">{receiptData.date}</p>
+                                <p className="text-sm text-gray-500 font-mono">Invoice: {receiptData.invoiceNumber}</p>
+                            </div>
+                            
+                            <div className="border-t-2 border-dashed border-gray-300 my-4"></div>
+                            
+                            <table className="w-full text-sm font-mono">
+                                <thead>
+                                    <tr className="border-b-2 border-dashed border-gray-300">
+                                        <th className="py-2 text-left">Item</th>
+                                        <th className="py-2 text-center">Qty</th>
+                                        <th className="py-2 text-right">Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {receiptData.items.map((item: any) => (
+                                        <tr key={item.id}>
+                                            <td className="py-2 text-left break-words max-w-[120px]">{item.name}</td>
+                                            <td className="py-2 text-center">{item.cartQuantity}</td>
+                                            <td className="py-2 text-right">₹{indianFormat(item.selling_price * item.cartQuantity)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+
+                            <div className="border-t-2 border-dashed border-gray-300 my-4"></div>
+
+                            <div className="space-y-1 font-mono text-sm">
+                                <div className="flex justify-between"><span>Subtotal</span><span>₹{indianFormat(receiptData.subTotal)}</span></div>
+                                <div className="flex justify-between"><span>Discount</span><span>-₹{indianFormat(receiptData.discountAmount)}</span></div>
+                                <div className="flex justify-between"><span>Tax</span><span>₹{indianFormat(receiptData.taxTotal)}</span></div>
+                            </div>
+
+                            <div className="border-t-2 border-dashed border-gray-300 my-4"></div>
+
+                            <div className="flex justify-between items-center text-xl font-black mb-4">
+                                <span>TOTAL</span>
+                                <span>₹{indianFormat(receiptData.grandTotal)}</span>
+                            </div>
+
+                            <div className="space-y-1 font-mono text-xs text-gray-500">
+                                <div className="flex justify-between"><span>Method:</span><span>{receiptData.paymentMethod}</span></div>
+                                {receiptData.paymentMethod === 'Cash' && typeof receiptData.amountTendered === 'number' && receiptData.amountTendered > 0 && (
+                                    <>
+                                        <div className="flex justify-between"><span>Tendered:</span><span>₹{indianFormat(receiptData.amountTendered)}</span></div>
+                                        <div className="flex justify-between"><span>Change:</span><span>₹{indianFormat(receiptData.amountTendered - receiptData.grandTotal)}</span></div>
+                                    </>
+                                )}
+                            </div>
+
+                            <div className="text-center mt-8">
+                                <QrCode className="w-16 h-16 mx-auto text-gray-800 mb-2" />
+                                <p className="font-bold text-sm tracking-widest">THANK YOU!</p>
+                                <p className="text-xs text-gray-400 mt-1">Please visit again</p>
+                            </div>
+                        </div>
+
+                        {/* Actions (Hidden during print) */}
+                        <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-4 print:hidden rounded-b-3xl">
+                            <button onClick={() => {setShowPaymentSuccess(false); setReceiptData(null);}} className="flex-1 py-3 bg-white border border-gray-200 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors shadow-sm">New Sale</button>
+                            <button onClick={() => window.print()} className="flex-[2] py-3 bg-gray-900 text-white rounded-xl font-extrabold hover:bg-black shadow-lg shadow-gray-900/20 active:scale-95 transition-all outline-none">🖨️ Print Receipt</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
-

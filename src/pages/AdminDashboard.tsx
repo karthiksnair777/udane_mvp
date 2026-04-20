@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useUser } from '@insforge/react';
-import { insforge, Shop } from '../lib/insforge';
+import { useUser } from '../contexts/AuthContext';
+import { supabase, Shop } from '../lib/supabase';
 import { indianFormat } from '../lib/utils';
 import { Store, Plus, Power, ShieldAlert, X, Mail, LayoutDashboard, BadgeIndianRupee, Activity, ShoppingBag } from 'lucide-react';
 
@@ -25,8 +25,8 @@ export function AdminDashboard() {
     const loadData = async () => {
         setLoading(true);
         const [shopsRes, salesRes] = await Promise.all([
-            insforge.database.from('shops').select('*').order('created_at', { ascending: false }),
-            insforge.database.from('sales').select('id, total_amount')
+            supabase.from('shops').select('*').order('created_at', { ascending: false }),
+            supabase.from('sales').select('id, total_amount')
         ]);
 
         if (shopsRes.data) setShops(shopsRes.data);
@@ -43,16 +43,18 @@ export function AdminDashboard() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        await insforge.database.from('shops').insert({
+        const { error } = await supabase.from('shops').insert({
             name: formData.name,
             phone: formData.phone,
             address: formData.address,
             owner_email: formData.owner_email,
-            gst_number: formData.gst_number,
-            category: formData.category,
-            business_hours: formData.business_hours,
             status: 'active'
         });
+
+        if (error) {
+            alert("Error creating shop: " + error.message);
+            return;
+        }
 
         setIsModalOpen(false);
         loadData();
@@ -60,7 +62,7 @@ export function AdminDashboard() {
 
     const toggleStatus = async (id: string, currentStatus: string) => {
         const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
-        await insforge.database.from('shops').update({ status: newStatus }).eq('id', id);
+        await supabase.from('shops').update({ status: newStatus }).eq('id', id);
         loadData();
     };
 

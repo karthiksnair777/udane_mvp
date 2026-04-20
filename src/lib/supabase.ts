@@ -1,9 +1,17 @@
-import { createClient } from "@insforge/sdk";
+import { createClient } from "@supabase/supabase-js";
 
-export const insforge = createClient({
-  baseUrl: import.meta.env.VITE_INSFORGE_BASE_URL,
-  anonKey: import.meta.env.VITE_INSFORGE_ANON_KEY,
-});
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error(
+    "Missing Supabase configuration. Check your .env file for VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
+  );
+}
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type Shop = {
   id: string;
@@ -66,7 +74,7 @@ export type SaleItem = {
   unit_price: number;
   total_price: number;
   created_at: string;
-  product?: Product; // for joins
+  product?: Product;
   discount?: number;
   tax?: number;
 };

@@ -2,69 +2,111 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@layer base {
+  body {
+    @apply transition-colors duration-300 ease-in-out;
   }
-  a:hover {
-    color: #747bff;
+  
+  /* PREMIUM DARK MODE OVERRIDES */
+  .dark body { 
+    @apply bg-[#0B1120] text-slate-200; 
   }
-  button {
-    background-color: #f9f9f9;
+  
+  /* Core layout backgrounds */
+  .dark .bg-white { 
+    @apply bg-[#111827] border-[#1F2937] text-slate-100 !important; 
   }
+  .dark .bg-gray-50 { 
+    @apply bg-[#0B1120] border-[#1F2937] text-slate-300 !important; 
+  }
+  .dark .bg-gray-100 { 
+    @apply bg-[#1F2937] border-[#374151] text-slate-200 !important; 
+  }
+  
+  /* Text conversions */
+  .dark .text-gray-900 { 
+    @apply text-white !important; 
+  }
+  .dark .text-gray-800 { 
+    @apply text-slate-200 !important; 
+  }
+  .dark .text-gray-700 { 
+    @apply text-slate-300 !important; 
+  }
+  .dark .text-gray-600 { 
+    @apply text-slate-400 !important; 
+  }
+  .dark .text-gray-500 { 
+    @apply text-slate-400 !important; 
+  }
+  .dark .text-gray-400 { 
+    @apply text-slate-500 !important; 
+  }
+  
+  /* Borders */
+  .dark .border-gray-50, .dark .border-gray-100 { 
+    @apply border-[#1F2937] !important; 
+  }
+  .dark .border-gray-200 { 
+    @apply border-[#374151] !important; 
+  }
+  
+  /* Inputs & Forms */
+  .dark input, .dark textarea {
+    @apply bg-[#18212F] text-white border-[#374151] focus:ring-emerald-500/30 focus:border-emerald-500 !important;
+  }
+  
+  /* Theme Highlights (Green / Emerald) */
+  .dark .bg-green-50, .dark .bg-emerald-50 { 
+    @apply bg-emerald-900/20 text-emerald-400 border border-emerald-800/30 !important; 
+  }
+  .dark .text-green-700, .dark .text-emerald-700 { 
+    @apply text-emerald-400 !important; 
+  }
+  .dark .text-green-600, .dark .text-emerald-600 { 
+    @apply text-emerald-400 !important; 
+  }
+
+  /* Danger Highlights (Rose / Red) */
+  .dark .bg-rose-50, .dark .bg-red-50 {
+    @apply bg-rose-900/20 text-rose-400 border border-rose-800/30 !important; 
+  }
+  .dark .text-rose-500, .dark .text-rose-600, .dark .text-rose-700 {
+    @apply text-rose-400 !important; 
+  }
+
+  /* Info Highlights (Blue) */
+  .dark .bg-blue-50 {
+    @apply bg-blue-900/20 text-blue-400 border border-blue-800/30 !important; 
+  }
+  .dark .text-blue-500, .dark .text-blue-600 {
+    @apply text-blue-400 !important; 
+  }
+
+  /* Alert Highlights (Orange / Yellow) */
+  .dark .bg-orange-50, .dark .bg-yellow-50 {
+    @apply bg-orange-900/20 text-orange-400 border border-orange-800/30 !important; 
+  }
+  .dark .text-orange-500, .dark .text-orange-600 {
+    @apply text-orange-400 !important; 
+  }
+
+  /* Shadows for depth */
+  .dark .shadow-sm, .dark .shadow-md, .dark .shadow-lg, .dark .shadow-xl, .dark .shadow-2xl {
+    box-shadow: 0 10px 40px -10px, rgba(0, 0, 0, 0.7) !important;
+  }
+  
+  /* Buttons */
+  .dark button {
+    @apply transition-colors duration-200 transform;
+  }
+}
+
+/* Hide scrollbar for clean UI */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

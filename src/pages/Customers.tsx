@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useUser } from '@insforge/react';
-import { insforge, Customer } from '../lib/insforge';
+import { useUser } from '../contexts/AuthContext';
+import { supabase, Customer } from '../lib/supabase';
 import { indianFormat } from '../lib/utils';
 import { Plus, Edit2, Trash2, X, Users, Phone, Mail, Award, CreditCard } from 'lucide-react';
 
@@ -27,7 +27,7 @@ export function Customers() {
             return;
         }
         setLoading(true);
-        const { data } = await insforge.database
+        const { data } = await supabase
             .from('customers')
             .select('*')
             .eq('shop_id', shopId)
@@ -55,9 +55,9 @@ export function Customers() {
         };
 
         if (editingId) {
-            await insforge.database.from('customers').update(payload).eq('id', editingId);
+            await supabase.from('customers').update(payload).eq('id', editingId);
         } else {
-            await insforge.database.from('customers').insert(payload);
+            await supabase.from('customers').insert(payload);
         }
 
         setIsModalOpen(false);
@@ -78,7 +78,7 @@ export function Customers() {
 
     const handleDelete = async (id: string, name: string) => {
         if (confirm(`Are you sure you want to delete customer ${name}?`)) {
-            await insforge.database.from('customers').delete().eq('id', id);
+            await supabase.from('customers').delete().eq('id', id);
             loadCustomers();
         }
     };

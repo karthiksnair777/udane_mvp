@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useUser } from '@insforge/react';
-import { insforge, Supplier } from '../lib/insforge';
+import { useUser } from '../contexts/AuthContext';
+import { supabase, Supplier } from '../lib/supabase';
 import { Plus, Edit2, Trash2, X, Truck, Phone, Mail, MapPin } from 'lucide-react';
 
 export function Suppliers() {
@@ -26,7 +26,7 @@ export function Suppliers() {
             return;
         }
         setLoading(true);
-        const { data } = await insforge.database
+        const { data } = await supabase
             .from('suppliers')
             .select('*')
             .eq('shop_id', shopId)
@@ -54,9 +54,9 @@ export function Suppliers() {
         };
 
         if (editingId) {
-            await insforge.database.from('suppliers').update(payload).eq('id', editingId);
+            await supabase.from('suppliers').update(payload).eq('id', editingId);
         } else {
-            await insforge.database.from('suppliers').insert(payload);
+            await supabase.from('suppliers').insert(payload);
         }
 
         setIsModalOpen(false);
@@ -77,7 +77,7 @@ export function Suppliers() {
 
     const handleDelete = async (id: string, name: string) => {
         if (confirm(`Are you sure you want to remove supplier ${name}?`)) {
-            await insforge.database.from('suppliers').delete().eq('id', id);
+            await supabase.from('suppliers').delete().eq('id', id);
             loadSuppliers();
         }
     };

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useUser } from '@insforge/react';
-import { insforge, Product, Sale } from '../lib/insforge';
+import { useUser } from '../contexts/AuthContext';
+import { supabase, Product, Sale } from '../lib/supabase';
 import { indianFormat } from '../lib/utils';
 import { ArrowUpRight, PackageOpen, LayoutDashboard, ShoppingBag, TrendingUp, AlertCircle, Image as ImageIcon, Clock } from 'lucide-react';
 
@@ -24,13 +24,13 @@ export function Dashboard() {
             today.setHours(0, 0, 0, 0);
 
             // fetch all sales for metrics (we can filter locally for today)
-            const { data: salesData } = await insforge.database
+            const { data: salesData } = await supabase
                 .from('sales')
                 .select('*')
                 .eq('shop_id', shopId);
 
             // fetch products count & low stock
-            const { data: productsData } = await insforge.database
+            const { data: productsData } = await supabase
                 .from('products')
                 .select('*')
                 .eq('shop_id', shopId);

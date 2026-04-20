@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useUser } from '@insforge/react';
-import { insforge, Sale, SaleItem, Product } from '../lib/insforge';
+import { useUser } from '../contexts/AuthContext';
+import { supabase, Sale, SaleItem, Product } from '../lib/supabase';
 import { indianFormat } from '../lib/utils';
 import { Receipt, Search, FileText, CalendarDays, Banknote, CreditCard, QrCode } from 'lucide-react';
 
@@ -20,7 +20,7 @@ export function SalesHistory() {
 
         const fetchSales = async () => {
             setLoading(true);
-            const { data: salesData } = await insforge.database
+            const { data: salesData } = await supabase
                 .from('sales')
                 .select(`
           *,

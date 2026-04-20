@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useUser } from '@insforge/react';
-import { insforge, Expense } from '../lib/insforge';
+import { useUser } from '../contexts/AuthContext';
+import { supabase, Expense } from '../lib/supabase';
 import { indianFormat } from '../lib/utils';
 import { Plus, Edit2, Trash2, X, Wallet, Tag } from 'lucide-react';
 
@@ -28,7 +28,7 @@ export function Expenses() {
             return;
         }
         setLoading(true);
-        const { data } = await insforge.database
+        const { data } = await supabase
             .from('expenses')
             .select('*')
             .eq('shop_id', shopId)
@@ -55,9 +55,9 @@ export function Expenses() {
         };
 
         if (editingId) {
-            await insforge.database.from('expenses').update(payload).eq('id', editingId);
+            await supabase.from('expenses').update(payload).eq('id', editingId);
         } else {
-            await insforge.database.from('expenses').insert(payload);
+            await supabase.from('expenses').insert(payload);
         }
 
         setIsModalOpen(false);
@@ -77,7 +77,7 @@ export function Expenses() {
 
     const handleDelete = async (id: string, category: string) => {
         if (confirm(`Are you sure you want to delete this ${category} expense?`)) {
-            await insforge.database.from('expenses').delete().eq('id', id);
+            await supabase.from('expenses').delete().eq('id', id);
             loadExpenses();
         }
     };

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useUser } from '@insforge/react';
-import { insforge, Product } from '../lib/insforge';
+import { useUser } from '../contexts/AuthContext';
+import { supabase, Product } from '../lib/supabase';
 import { indianFormat } from '../lib/utils';
 import { Plus, Edit2, Trash2, X, Package, Image as ImageIcon, Barcode, ScanBarcode } from 'lucide-react';
 
@@ -30,7 +30,7 @@ export function Inventory() {
             return;
         }
         setLoading(true);
-        const { data } = await insforge.database
+        const { data } = await supabase
             .from('products')
             .select('*')
             .eq('shop_id', shopId)
@@ -61,9 +61,11 @@ export function Inventory() {
         };
 
         if (editingId) {
-            await insforge.database.from('products').update(payload).eq('id', editingId);
+            const { error } = await supabase.from('products').update(payload).eq('id', editingId);
+            if (error) alert("Error updating product: " + error.message);
         } else {
-            await insforge.database.from('products').insert(payload);
+            const { error } = await supabase.from('products').insert(payload);
+            if (error) alert("Error creating product: " + error.message);
         }
 
         setIsModalOpen(false);
@@ -87,7 +89,7 @@ export function Inventory() {
 
     const handleDelete = async (id: string, name: string) => {
         if (confirm(`Are you sure you want to delete ${name}?`)) {
-            await insforge.database.from('products').delete().eq('id', id);
+            await supabase.from('products').delete().eq('id', id);
             loadProducts();
         }
     };
