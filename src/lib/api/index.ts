@@ -1,5 +1,5 @@
 import { insforge } from '../insforge';
-import { AuthService } from './auth';
+
 
 export const ShopService = {
     async getAll() {
@@ -168,4 +168,3 @@ export const OrderItemService = {
     }
 };
 
-export { AuthService };

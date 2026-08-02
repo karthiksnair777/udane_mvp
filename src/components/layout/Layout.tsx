@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import { useUser, useShop } from '../../contexts/AuthContext';
-import { AuthService } from '../../lib/api';
+import { AuthService } from '../../lib/api/auth';
 import { Store, Settings, Package, ShoppingCart, Clock, User, Users, Truck, Wallet, Sun, Moon, LayoutDashboard } from 'lucide-react';
 
 export function Layout() {
