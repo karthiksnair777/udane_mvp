@@ -200,7 +200,7 @@ export function Explore() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {filteredShops.map((shop, i) => (
+                            {filteredShops.map((shop) => (
                                 <Link 
                                     key={shop.id} 
                                     to={`/shop/${shop.id}`} 
