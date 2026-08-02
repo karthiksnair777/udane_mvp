@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useUser } from '../contexts/AuthContext';
-import { supabase, Product } from '../lib/supabase';
+import { useShop } from '../contexts/AuthContext';
+import { ProductService } from '../lib/api';
+import { Product } from '../lib/supabase';
 import { indianFormat } from '../lib/utils';
 import { Plus, Edit2, Trash2, X, Package, Image as ImageIcon, Barcode, ScanBarcode } from 'lucide-react';
 
 export function Inventory() {
-    const { user } = useUser();
-    const shopId = user?.profile?.shop_id as string | undefined;
+    
+    const { shopId } = useShop();
 
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -30,13 +31,9 @@ export function Inventory() {
             return;
         }
         setLoading(true);
-        const { data } = await supabase
-            .from('products')
-            .select('*')
-            .eq('shop_id', shopId)
-            .order('created_at', { ascending: false });
+        const { data } = await ProductService.getByShop(shopId);
 
-        if (data) setProducts(data);
+        if (data) setProducts(data as any);
         setLoading(false);
     };
 
@@ -61,11 +58,11 @@ export function Inventory() {
         };
 
         if (editingId) {
-            const { error } = await supabase.from('products').update(payload).eq('id', editingId);
-            if (error) alert("Error updating product: " + error.message);
+            const { error } = await ProductService.update(editingId, payload);
+            if (error) alert("Error updating product: " + (error as any).message);
         } else {
-            const { error } = await supabase.from('products').insert(payload);
-            if (error) alert("Error creating product: " + error.message);
+            const { error } = await ProductService.create(payload);
+            if (error) alert("Error creating product: " + (error as any).message);
         }
 
         setIsModalOpen(false);
@@ -89,7 +86,7 @@ export function Inventory() {
 
     const handleDelete = async (id: string, name: string) => {
         if (confirm(`Are you sure you want to delete ${name}?`)) {
-            await supabase.from('products').delete().eq('id', id);
+            await ProductService.delete(id);
             loadProducts();
         }
     };

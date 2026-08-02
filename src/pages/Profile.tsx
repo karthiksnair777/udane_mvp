@@ -1,11 +1,11 @@
-import { useUser } from '../contexts/AuthContext';
+import { useUser, useShop } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { User } from 'lucide-react';
 
 export function Profile() {
     const { user } = useUser();
     const role = user?.profile?.role || 'user';
-    const shopId = user?.profile?.shop_id;
+    const { shopId } = useShop();
 
     return (
         <div className="p-8 max-w-4xl mx-auto space-y-6">

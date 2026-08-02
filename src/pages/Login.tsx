@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { AuthService } from "../lib/api";
 
 export function Login() {
-    const navigate = useNavigate();
+    
     const [isSignUp, setIsSignUp] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -20,58 +19,37 @@ export function Login() {
 
         try {
             if (isSignUp) {
-                const { data, error: signUpError } = await supabase.auth.signUp({
-                    email: email.trim(),
-                    password,
-                    options: {
-                        data: {
-                            name: fullName
-                        }
-                    }
-                });
+                const { data, error: signUpError } = await AuthService.signUp(email.trim(), password);
 
                 if (signUpError) throw signUpError;
                 
-                if (data.user) {
+                if (data?.user) {
                     setSuccessMsg("Account created successfully! You are now logged in.");
-                    // Check if they were automatically logged in
-                    if (data.session) {
-                        setTimeout(() => navigate("/admin"), 1500);
-                    } else {
-                        setSuccessMsg("Account created! Please verify your email if required, or sign in.");
-                        setIsSignUp(false);
-                    }
+                    setTimeout(() => window.location.href = "/merchant/admin", 1500);
                 }
             } else {
-                const { data, error: signInError } = await supabase.auth.signInWithPassword({ 
-                    email: email.trim(), 
-                    password 
-                });
+                const { data, error: signInError } = await AuthService.signIn(email.trim(), password);
 
                 if (signInError) throw signInError;
 
-                if (data.user) {
-                    const { data: profile, error: profileError } = await supabase
-                        .from("user_profiles")
-                        .select("*")
-                        .eq("id", data.user.id)
-                        .single();
+                if (data?.user) {
+                    const { data: profile, error: profileError } = await AuthService.getUserProfile(data.user.id);
 
                     if (profileError || !profile) {
                         throw new Error("No profile found. Contact your administrator.");
                     }
 
                     if (profile.role === "super_admin") {
-                        navigate("/admin");
+                        window.location.href = "/merchant/admin";
                     } else {
-                        navigate("/dashboard");
+                        window.location.href = "/merchant/dashboard";
                     }
                 }
             }
         } catch (err: any) {
             setError(err.message || "An error occurred during authentication.");
             if (err.message?.includes("No profile found")) {
-                await supabase.auth.signOut();
+                await AuthService.signOut();
             }
         } finally {
             setLoading(false);
@@ -140,6 +118,7 @@ export function Login() {
                             className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition-all"
                         />
                     </div>
+                    
                     <button
                         type="submit"
                         disabled={loading}
@@ -164,7 +143,7 @@ export function Login() {
                 </div>
 
                 <p className="mt-6 text-center text-xs text-gray-400">
-                    Powered by Supabase · Udane POS
+                    Demo Mode · No Database Required
                 </p>
             </div>
         </div>

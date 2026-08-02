@@ -4,7 +4,9 @@
 
 @layer base {
   body {
-    @apply transition-colors duration-300 ease-in-out;
+    @apply transition-colors duration-300 ease-in-out antialiased tracking-tight bg-gray-50;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   
   /* PREMIUM DARK MODE OVERRIDES */

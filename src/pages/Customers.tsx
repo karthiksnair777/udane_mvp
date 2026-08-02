@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useUser } from '../contexts/AuthContext';
+import { useShop } from '../contexts/AuthContext';
 import { supabase, Customer } from '../lib/supabase';
 import { indianFormat } from '../lib/utils';
 import { Plus, Edit2, Trash2, X, Users, Phone, Mail, Award, CreditCard } from 'lucide-react';
 
 export function Customers() {
-    const { user } = useUser();
-    const shopId = user?.profile?.shop_id as string | undefined;
+    
+    const { shopId } = useShop();
 
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);

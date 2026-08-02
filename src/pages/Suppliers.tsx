@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useUser } from '../contexts/AuthContext';
+import { useShop } from '../contexts/AuthContext';
 import { supabase, Supplier } from '../lib/supabase';
 import { Plus, Edit2, Trash2, X, Truck, Phone, Mail, MapPin } from 'lucide-react';
 
 export function Suppliers() {
-    const { user } = useUser();
-    const shopId = user?.profile?.shop_id as string | undefined;
+    
+    const { shopId } = useShop();
 
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [loading, setLoading] = useState(true);
