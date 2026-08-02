@@ -1,6 +1,9 @@
 import { insforge } from './insforge';
 
-export const supabase = insforge;
+export const supabase = {
+  from: (table: string) => insforge.database.from(table),
+  auth: insforge.auth
+};
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
